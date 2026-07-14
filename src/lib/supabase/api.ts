@@ -1,0 +1,9 @@
+import { supabase } from './client'; import type { Participant,ParticipantInput } from '../../types';
+const friendly=()=>new Error('Data belum dapat dimuat. Periksa koneksi internet, lalu coba kembali.');
+export async function findById(value:string){const {data,error}=await supabase.rpc('find_participant_by_id',{search_id:value.trim()});if(error)throw friendly();return (data?.[0]??null) as Participant|null}
+export async function searchByName(value:string){const {data,error}=await supabase.rpc('search_participants_by_name',{search_name:value.trim()});if(error)throw friendly();return (data??[]) as Participant[]}
+export async function getParticipant(id:string){const {data,error}=await supabase.rpc('get_public_participant',{public_id:id});if(error)throw friendly();return (data?.[0]??null) as Participant|null}
+export async function listParticipants(page=1,query='',province='',table=''){let request=supabase.from('participants').select('*',{count:'exact'}).order('name').range((page-1)*20,page*20-1);if(query)request=request.or(`name.ilike.%${query}%,participant_id.ilike.%${query}%`);if(province)request=request.eq('province',province);if(table)request=request.eq('table_number',Number(table));const {data,error,count}=await request;if(error)throw friendly();return {data:(data??[]) as Participant[],count:count??0}}
+export async function saveParticipant(value:ParticipantInput,id?:string){const request=id?supabase.from('participants').update(value).eq('id',id):supabase.from('participants').insert(value);const {error}=await request;if(error)throw new Error('Data peserta belum dapat disimpan.')}
+export async function removeParticipant(id:string){const {error}=await supabase.from('participants').delete().eq('id',id);if(error)throw new Error('Data peserta belum dapat dihapus.')}
+export async function upsertBatch(rows:ParticipantInput[]){const {error}=await supabase.from('participants').upsert(rows,{onConflict:'participant_id'});if(error)throw error}
